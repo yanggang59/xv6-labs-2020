@@ -9,6 +9,36 @@
 
 static int loadseg(pde_t *pgdir, uint64 addr, struct inode *ip, uint offset, uint sz);
 
+void vmprint(pagetable_t pagetable)
+{
+  pagetable_t pgtbl_1, pgtbl_2;
+  pagetable_t pte_1, pte_2;
+  printf("page table %p\r\n", (uint64)pagetable);
+  for(int i = 0; i < 10; i++) {
+    pte_t *pte = &pagetable[i];
+    if(*pte & PTE_V) {
+        printf("..%d: pte %p pa %p\r\n", i, (uint64)(*pte), (uint64)(((*pte) >> 10) << 12));
+    } else 
+      continue;
+    pgtbl_1 = (pagetable_t)PTE2PA(*pte);
+    for(int j = 0; j < 10; j++) {
+      pte_1 = &pgtbl_1[j];
+      if(*pte_1 & PTE_V) {
+        printf(".. ..%d: pte %p pa %p\r\n", j, (uint64)(*pte_1), (uint64)(((*pte_1) >> 10) << 12));
+      } else
+      continue;
+      pgtbl_2 = (pagetable_t)PTE2PA(*pte_1);
+      for(int k = 0; k < 10; k++) {
+        pte_2 = &pgtbl_2[k];
+        if(*pte_2 & PTE_V) {
+          printf(".. .. ..%d: pte %p pa %p\r\n", k, (uint64)(*pte_2), (uint64)(((*pte_2) >> 10) << 12));
+        } else
+          continue;
+      }
+    }
+  }
+}
+
 int
 exec(char *path, char **argv)
 {
@@ -116,6 +146,7 @@ exec(char *path, char **argv)
   p->trapframe->sp = sp; // initial stack pointer
   proc_freepagetable(oldpagetable, oldsz);
 
+  if(p->pid==1) vmprint(p->pagetable);
   return argc; // this ends up in a0, the first argument to main(argc, argv)
 
  bad:
